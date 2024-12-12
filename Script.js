@@ -35,22 +35,46 @@ uploadInput.addEventListener('change', (event) => {
     reader.readAsArrayBuffer(file);
 });
 
+// Função de mapeamento flexível para cabeçalhos
+function mapHeader(header) {
+    const headerMap = {
+        itens: ['itens', 'item'],
+        codigo: ['codigo', 'código', 'cod', 'code'],
+        quantidade: ['qnd', 'qnt', 'quantidade'],
+        descricao: ['descrição', 'descricao', 'descr', 'description'],
+        massa: ['mass', 'massa', 'peso'],
+        material: ['material'],
+        link: ['link']
+    };
+
+    const normalizedHeader = header.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    for (const [key, aliases] of Object.entries(headerMap)) {
+        if (aliases.includes(normalizedHeader)) {
+            return key;
+        }
+    }
+    return null; // Cabeçalho não identificado
+}
+
 function processData(data) {
-    const headers = ['ITENS', 'CODIGO', 'QND', 'DESCRIÇAO', 'MASS', 'MATERIAL', 'LINK'];
+    const headers = ['ITENS', 'CODIGO', 'QND', 'DESCRIÇÃO', 'MASS', 'MATERIAL', 'LINK'];
     const headerIndexMap = {};
     errorLog = []; // Limpa erros anteriores
 
-    // Mapear os índices das colunas no arquivo original
+    // Mapeia os índices das colunas do arquivo original
     data[0].forEach((header, index) => {
-        if (headers.includes(header)) {
-            headerIndexMap[header] = index;
+        const mappedHeader = mapHeader(header);
+        if (mappedHeader) {
+            headerIndexMap[mappedHeader] = index;
+        } else {
+            errorLog.push(`Cabeçalho desconhecido: "${header}"`);
         }
     });
 
-    // Garante que todas as colunas existam no arquivo final
+    // Garante que todas as colunas estejam representadas
     headers.forEach((header) => {
-        if (!(header in headerIndexMap)) {
-            headerIndexMap[header] = -1; // Coluna ausente
+        if (!(header.toLowerCase() in headerIndexMap)) {
+            headerIndexMap[header.toLowerCase()] = -1; // Coluna ausente
         }
     });
 
@@ -58,7 +82,7 @@ function processData(data) {
 
     data.slice(1).forEach((row, rowIndex) => {
         const newRow = headers.map((header) => {
-            const colIndex = headerIndexMap[header];
+            const colIndex = headerIndexMap[header.toLowerCase()];
             let value = colIndex !== -1 ? row[colIndex] || '' : '';
 
             // Validações e formatações
@@ -66,7 +90,7 @@ function processData(data) {
                 if (!/^\d{2}\.\d{2}\.\d{2}\.\d{10}$/.test(value)) {
                     errorLog.push(`Erro no código na linha ${rowIndex + 2}: "${value}" não está no formato correto.`);
                 }
-            } else if (header === 'DESCRIÇAO' && value.trim() === '') {
+            } else if (header === 'DESCRIÇÃO' && value.trim() === '') {
                 errorLog.push(`Descrição ausente na linha ${rowIndex + 2}.`);
             } else if (header === 'MASS') {
                 value = '0,1'; // Define "MASS" como 0,1
