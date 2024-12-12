@@ -40,14 +40,12 @@ function processData(data) {
     const headerIndexMap = {};
     errorLog = []; // Limpa erros anteriores
 
-    // Mapeia as colunas com base nos cabeçalhos
     data[0].forEach((header, index) => {
         if (headers.includes(header)) {
             headerIndexMap[header] = index;
         }
     });
 
-    // Preenche colunas ausentes
     headers.forEach((header) => {
         if (!(header in headerIndexMap)) {
             headerIndexMap[header] = -1; // Coluna ausente
@@ -56,7 +54,6 @@ function processData(data) {
 
     const processedData = [headers];
 
-    // Processa as linhas
     data.slice(1).forEach((row, rowIndex) => {
         const newRow = headers.map((header) => {
             const colIndex = headerIndexMap[header];
@@ -81,7 +78,6 @@ function processData(data) {
         processedData.push(newRow);
     });
 
-    // Caso a coluna 'ITENS' esteja ausente, cria a numeração
     if (headerIndexMap['ITENS'] === -1) {
         processedData.forEach((row, index) => {
             if (index === 0) {
@@ -99,14 +95,14 @@ function renderTableWithHeaders(data) {
     let tableHtml = '<table>';
     tableHtml += '<thead><tr>';
     data[0].forEach((header) => {
-        tableHtml += `<th contenteditable="true">${header}</th>`;  // Permite edição dos cabeçalhos
+        tableHtml += `<th>${header}</th>`;
     });
     tableHtml += '</tr></thead>';
     tableHtml += '<tbody>';
     data.slice(1).forEach((row) => {
         tableHtml += '<tr>';
         row.forEach((cell) => {
-            tableHtml += `<td contenteditable="true">${cell}</td>`;  // Permite edição das células
+            tableHtml += `<td>${cell}</td>`;
         });
         tableHtml += '</tr>';
     });
