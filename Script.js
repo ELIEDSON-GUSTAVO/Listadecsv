@@ -1,6 +1,7 @@
 const uploadInput = document.getElementById('upload');
 const downloadExcelBtn = document.getElementById('download-excel');
 const downloadCsvBtn = document.getElementById('download-csv');
+const importTableBtn = document.getElementById('import-table');
 const tableContainer = document.getElementById('table-container');
 
 let workbook; // Variável para armazenar o arquivo Excel
@@ -31,6 +32,7 @@ uploadInput.addEventListener('change', (event) => {
 
         downloadExcelBtn.disabled = false;
         downloadCsvBtn.disabled = false;
+        importTableBtn.disabled = false; // Habilita o botão de importação
     };
     reader.readAsArrayBuffer(file);
 });
@@ -125,4 +127,27 @@ downloadCsvBtn.addEventListener('click', () => {
     link.href = URL.createObjectURL(blob);
     link.download = 'editado.csv';
     link.click();
+});
+
+importTableBtn.addEventListener('click', () => {
+    const file = uploadInput.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const data = new Uint8Array(e.target.result);
+        const newWorkbook = XLSX.read(data, { type: 'array' });
+
+        const sheetName = newWorkbook.SheetNames[0];
+        const sheet = newWorkbook.Sheets[sheetName];
+
+        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        // Processa novos dados
+        const processedData = processData(jsonData);
+        renderTableWithHeaders(processedData);
+
+        alert('Nova tabela importada com sucesso!');
+    };
+    reader.readAsArrayBuffer(file);
 });
