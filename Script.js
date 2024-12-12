@@ -1,50 +1,11 @@
-const uploadInput = document.getElementById('upload');
-const downloadExcelBtn = document.getElementById('download-excel');
-const downloadCsvBtn = document.getElementById('download-csv');
-const tableContainer = document.getElementById('table-container');
-
-let workbook; // Variável para armazenar o arquivo Excel
-let errorLog = []; // Armazena erros encontrados
-
-uploadInput.addEventListener('change', (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const data = new Uint8Array(e.target.result);
-        workbook = XLSX.read(data, { type: 'array' });
-
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-
-        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-
-        // Processa os dados
-        const processedData = processData(jsonData);
-        renderTableWithHeaders(processedData);
-
-        // Exibe log de erros, se houver
-        if (errorLog.length > 0) {
-            alert("Foram encontrados os seguintes erros:\n" + errorLog.join('\n'));
-        }
-
-        downloadExcelBtn.disabled = false;
-        downloadCsvBtn.disabled = false;
-    };
-    reader.readAsArrayBuffer(file);
-});
-
-// Função de mapeamento flexível para cabeçalhos
 function mapHeader(header) {
     const headerMap = {
-        itens: ['itens', 'item'],
-        codigo: ['codigo', 'código', 'cod', 'code'],
-        quantidade: ['qnd', 'qnt', 'quantidade'],
-        descricao: ['descrição', 'descricao', 'descr', 'description'],
-        massa: ['mass', 'massa', 'peso'],
-        material: ['material'],
-        link: ['link']
+        itens: ['itens'],
+        codigo: ['codigo', 'código'],
+        quantidade: ['qt', 'quantidade'],
+        descricao: ['descrição', 'descricao'],
+        un_medida: ['un. medida', 'unidade', 'unidade de medida'],
+        local: ['local']
     };
 
     const normalizedHeader = header.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -57,9 +18,9 @@ function mapHeader(header) {
 }
 
 function processData(data) {
-    const headers = ['ITENS', 'CODIGO', 'QND', 'DESCRIÇÃO', 'MASS', 'MATERIAL', 'LINK'];
+    const headers = ['ITENS', 'CODIGO', 'QT', 'UN. MEDIDA', 'DESCRIÇÃO', 'LOCAL'];
     const headerIndexMap = {};
-    errorLog = []; // Limpa erros anteriores
+    let errorLog = []; // Limpa erros anteriores
 
     // Mapeia os índices das colunas do arquivo original
     data[0].forEach((header, index) => {
@@ -83,23 +44,13 @@ function processData(data) {
     data.slice(1).forEach((row, rowIndex) => {
         const newRow = headers.map((header) => {
             const colIndex = headerIndexMap[header.toLowerCase()];
-            let value = colIndex !== -1 ? row[colIndex] || '' : '';
-
-            // Validações e formatações
-            if (header === 'CODIGO') {
-                if (!/^\d{2}\.\d{2}\.\d{2}\.\d{10}$/.test(value)) {
-                    errorLog.push(`Erro no código na linha ${rowIndex + 2}: "${value}" não está no formato correto.`);
-                }
-            } else if (header === 'DESCRIÇÃO' && value.trim() === '') {
-                errorLog.push(`Descrição ausente na linha ${rowIndex + 2}.`);
-            } else if (header === 'MASS') {
-                value = '0,1'; // Define "MASS" como 0,1
-            } else if (['MATERIAL', 'LINK'].includes(header)) {
-                value = ''; // Garante que essas colunas fiquem vazias
-            }
-
-            return value;
+            return colIndex !== -1 ? row[colIndex] || '' : '';
         });
+
+        // Validações específicas para as colunas
+        if (!/^\d{2}\.\d{2}\.\d{2}\.\d{10}$/.test(newRow[1])) {
+            errorLog.push(`Erro no código na linha ${rowIndex + 2}: "${newRow[1]}" não está no formato correto.`);
+        }
 
         processedData.push(newRow);
     });
@@ -113,41 +64,37 @@ function processData(data) {
         }
     });
 
+    // Exibe erros no console, se houver
+    if (errorLog.length > 0) {
+        console.error('Erros encontrados durante o processamento:');
+        errorLog.forEach((error) => console.error(error));
+    }
+
     return processedData;
 }
 
-function renderTableWithHeaders(data) {
-    let tableHtml = '<table>';
-    tableHtml += '<thead><tr>';
-    data[0].forEach((header) => {
-        tableHtml += `<th>${header}</th>`;
-    });
-    tableHtml += '</tr></thead>';
-    tableHtml += '<tbody>';
-    data.slice(1).forEach((row) => {
-        tableHtml += '<tr>';
-        row.forEach((cell) => {
-            tableHtml += `<td>${cell}</td>`;
-        });
-        tableHtml += '</tr>';
-    });
-    tableHtml += '</tbody></table>';
-    tableContainer.innerHTML = tableHtml;
-}
-
-downloadExcelBtn.addEventListener('click', () => {
-    const sheet = XLSX.utils.table_to_sheet(document.querySelector('table'));
-    const newWorkbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(newWorkbook, sheet, 'Sheet1');
-    XLSX.writeFile(newWorkbook, 'editado.xlsx');
-});
-
-downloadCsvBtn.addEventListener('click', () => {
-    const sheet = XLSX.utils.table_to_sheet(document.querySelector('table'));
-    const csv = XLSX.utils.sheet_to_csv(sheet);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+function exportToCSV(data, filename) {
+    const csvContent = data.map((row) => row.map((cell) => `"${cell}"`).join(';')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = 'editado.csv';
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
+}
+
+document.getElementById('fileInput').addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const fileContent = e.target.result;
+        const rows = fileContent.split('\n').map((row) => row.split(';'));
+        const processedData = processData(rows);
+        exportToCSV(processedData, 'dados_processados.csv');
+    };
+    reader.readAsText(file);
 });
