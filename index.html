@@ -38,6 +38,7 @@
         th, td {
             padding: 10px;
             text-align: left;
+            cursor: pointer;
         }
 
         th {
@@ -70,6 +71,15 @@
 
         button:hover:not(:disabled) {
             background-color: #45a049;
+        }
+
+        /* Estilos para editar as células */
+        td.editable {
+            background-color: #e8f4e8;
+        }
+
+        td.editable:hover {
+            background-color: #c8e6c8;
         }
     </style>
 </head>
