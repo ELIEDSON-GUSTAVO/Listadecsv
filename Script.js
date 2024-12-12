@@ -1,100 +1,110 @@
-function mapHeader(header) {
-    const headerMap = {
-        itens: ['itens'],
-        codigo: ['codigo', 'código'],
-        quantidade: ['qt', 'quantidade'],
-        descricao: ['descrição', 'descricao'],
-        un_medida: ['un. medida', 'unidade', 'unidade de medida'],
-        local: ['local']
-    };
+// Seleção de elementos no DOM
+const fileInput = document.getElementById('fileInput');
+const uploadInput = document.getElementById('upload');
+const tableContainer = document.getElementById('table-container');
+const downloadExcelButton = document.getElementById('download-excel');
+const downloadCsvButton = document.getElementById('download-csv');
+const importTableButton = document.getElementById('import-table');
 
-    const normalizedHeader = header.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    for (const [key, aliases] of Object.entries(headerMap)) {
-        if (aliases.includes(normalizedHeader)) {
-            return key;
-        }
-    }
-    return null; // Cabeçalho não identificado
-}
+let workbookData = null;
 
-function processData(data) {
-    const headers = ['ITENS', 'CODIGO', 'QT', 'UN. MEDIDA', 'DESCRIÇÃO', 'LOCAL'];
-    const headerIndexMap = {};
-    let errorLog = []; // Limpa erros anteriores
-
-    // Mapeia os índices das colunas do arquivo original
-    data[0].forEach((header, index) => {
-        const mappedHeader = mapHeader(header);
-        if (mappedHeader) {
-            headerIndexMap[mappedHeader] = index;
-        } else {
-            errorLog.push(`Cabeçalho desconhecido: "${header}"`);
-        }
-    });
-
-    // Garante que todas as colunas estejam representadas
-    headers.forEach((header) => {
-        if (!(header.toLowerCase() in headerIndexMap)) {
-            headerIndexMap[header.toLowerCase()] = -1; // Coluna ausente
-        }
-    });
-
-    const processedData = [headers];
-
-    data.slice(1).forEach((row, rowIndex) => {
-        const newRow = headers.map((header) => {
-            const colIndex = headerIndexMap[header.toLowerCase()];
-            return colIndex !== -1 ? row[colIndex] || '' : '';
-        });
-
-        // Validações específicas para as colunas
-        if (!/^\d{2}\.\d{2}\.\d{2}\.\d{10}$/.test(newRow[1])) {
-            errorLog.push(`Erro no código na linha ${rowIndex + 2}: "${newRow[1]}" não está no formato correto.`);
-        }
-
-        processedData.push(newRow);
-    });
-
-    // Preenche a coluna "ITENS" com ordem crescente
-    processedData.forEach((row, index) => {
-        if (index === 0) {
-            row[0] = 'ITENS';
-        } else {
-            row[0] = index; // Preenche com valores crescentes
-        }
-    });
-
-    // Exibe erros no console, se houver
-    if (errorLog.length > 0) {
-        console.error('Erros encontrados durante o processamento:');
-        errorLog.forEach((error) => console.error(error));
-    }
-
-    return processedData;
-}
-
-function exportToCSV(data, filename) {
-    const csvContent = data.map((row) => row.map((cell) => `"${cell}"`).join(';')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-document.getElementById('fileInput').addEventListener('change', (event) => {
+// Função para carregar e exibir o arquivo Excel
+fileInput.addEventListener('change', (event) => {
     const file = event.target.files[0];
-    if (!file) return;
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const fileContent = e.target.result;
-        const rows = fileContent.split('\n').map((row) => row.split(';'));
-        const processedData = processData(rows);
-        exportToCSV(processedData, 'dados_processados.csv');
-    };
-    reader.readAsText(file);
+            // Carrega a primeira planilha
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+
+            // Converte os dados da planilha para JSON
+            workbookData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            displayTable(workbookData);
+
+            // Ativa os botões de download e importar
+            downloadExcelButton.disabled = false;
+            downloadCsvButton.disabled = false;
+            importTableButton.disabled = false;
+        };
+        reader.readAsArrayBuffer(file);
+    }
+});
+
+// Função para exibir a tabela no DOM
+function displayTable(data) {
+    tableContainer.innerHTML = ''; // Limpa o container
+
+    const table = document.createElement('table');
+    table.classList.add('table');
+
+    data.forEach((row, rowIndex) => {
+        const tr = document.createElement('tr');
+        row.forEach((cell) => {
+            const cellElement = rowIndex === 0 ? document.createElement('th') : document.createElement('td');
+            cellElement.textContent = cell || ''; // Evita células vazias
+            tr.appendChild(cellElement);
+        });
+        table.appendChild(tr);
+    });
+
+    tableContainer.appendChild(table);
+}
+
+// Função para baixar o arquivo no formato Excel
+downloadExcelButton.addEventListener('click', () => {
+    if (workbookData) {
+        const ws = XLSX.utils.aoa_to_sheet(workbookData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+        XLSX.writeFile(wb, 'planilha_editada.xlsx');
+    }
+});
+
+// Função para baixar o arquivo no formato CSV
+downloadCsvButton.addEventListener('click', () => {
+    if (workbookData) {
+        const ws = XLSX.utils.aoa_to_sheet(workbookData);
+        const csv = XLSX.utils.sheet_to_csv(ws);
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'planilha_editada.csv';
+        a.click();
+
+        URL.revokeObjectURL(url);
+    }
+});
+
+// Função para importar a tabela de um novo arquivo Excel
+importTableButton.addEventListener('click', () => {
+    uploadInput.click();
+});
+
+// Função para lidar com o upload do novo arquivo Excel
+uploadInput.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+
+            // Carrega a primeira planilha
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+
+            // Converte os dados da planilha para JSON
+            workbookData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            displayTable(workbookData);
+        };
+        reader.readAsArrayBuffer(file);
+    }
 });
