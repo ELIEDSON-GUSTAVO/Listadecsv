@@ -41,6 +41,14 @@ button:disabled {
     cursor: not-allowed;
 }
 
+button#import-table {
+    background-color: #28a745; /* Verde para diferenciar */
+}
+
+button#import-table:disabled {
+    background-color: #95d3a2; /* Verde claro quando desabilitado */
+}
+
 table {
     width: 100%;
     margin-top: 20px;
