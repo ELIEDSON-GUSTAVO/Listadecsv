@@ -11,9 +11,11 @@
         <h1>Editor de Planilhas</h1>
         <input type="file" id="upload" accept=".xlsx, .xls">
         <div id="table-container"></div>
-        <button id="download-excel" disabled>Baixar Excel</button>
-        <button id="download-csv" disabled>Baixar CSV</button>
-        <button id="import-table" disabled>Importar Tabela</button>
+        <div class="button-container">
+            <button id="download-excel" disabled>Baixar Excel</button>
+            <button id="download-csv" disabled>Baixar CSV</button>
+            <button id="import-table" disabled>Importar Tabela</button>
+        </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="script.js"></script>
