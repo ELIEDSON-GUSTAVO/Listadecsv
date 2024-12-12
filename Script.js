@@ -1,110 +1,132 @@
-// Seleção de elementos no DOM
-const fileInput = document.getElementById('fileInput');
 const uploadInput = document.getElementById('upload');
+const downloadExcelBtn = document.getElementById('download-excel');
+const downloadCsvBtn = document.getElementById('download-csv');
 const tableContainer = document.getElementById('table-container');
-const downloadExcelButton = document.getElementById('download-excel');
-const downloadCsvButton = document.getElementById('download-csv');
-const importTableButton = document.getElementById('import-table');
 
-let workbookData = null;
+let workbook; // Variável para armazenar o arquivo Excel
+let errorLog = []; // Armazena erros encontrados
 
-// Função para carregar e exibir o arquivo Excel
-fileInput.addEventListener('change', (event) => {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-
-            // Carrega a primeira planilha
-            const sheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[sheetName];
-
-            // Converte os dados da planilha para JSON
-            workbookData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-            displayTable(workbookData);
-
-            // Ativa os botões de download e importar
-            downloadExcelButton.disabled = false;
-            downloadCsvButton.disabled = false;
-            importTableButton.disabled = false;
-        };
-        reader.readAsArrayBuffer(file);
-    }
-});
-
-// Função para exibir a tabela no DOM
-function displayTable(data) {
-    tableContainer.innerHTML = ''; // Limpa o container
-
-    const table = document.createElement('table');
-    table.classList.add('table');
-
-    data.forEach((row, rowIndex) => {
-        const tr = document.createElement('tr');
-        row.forEach((cell) => {
-            const cellElement = rowIndex === 0 ? document.createElement('th') : document.createElement('td');
-            cellElement.textContent = cell || ''; // Evita células vazias
-            tr.appendChild(cellElement);
-        });
-        table.appendChild(tr);
-    });
-
-    tableContainer.appendChild(table);
-}
-
-// Função para baixar o arquivo no formato Excel
-downloadExcelButton.addEventListener('click', () => {
-    if (workbookData) {
-        const ws = XLSX.utils.aoa_to_sheet(workbookData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-
-        XLSX.writeFile(wb, 'planilha_editada.xlsx');
-    }
-});
-
-// Função para baixar o arquivo no formato CSV
-downloadCsvButton.addEventListener('click', () => {
-    if (workbookData) {
-        const ws = XLSX.utils.aoa_to_sheet(workbookData);
-        const csv = XLSX.utils.sheet_to_csv(ws);
-
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'planilha_editada.csv';
-        a.click();
-
-        URL.revokeObjectURL(url);
-    }
-});
-
-// Função para importar a tabela de um novo arquivo Excel
-importTableButton.addEventListener('click', () => {
-    uploadInput.click();
-});
-
-// Função para lidar com o upload do novo arquivo Excel
 uploadInput.addEventListener('change', (event) => {
     const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
+    if (!file) return;
 
-            // Carrega a primeira planilha
-            const sheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[sheetName];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const data = new Uint8Array(e.target.result);
+        workbook = XLSX.read(data, { type: 'array' });
 
-            // Converte os dados da planilha para JSON
-            workbookData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-            displayTable(workbookData);
-        };
-        reader.readAsArrayBuffer(file);
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+
+        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        // Processa os dados
+        const processedData = processData(jsonData);
+        renderTableWithHeaders(processedData);
+
+        // Exibe log de erros, se houver
+        if (errorLog.length > 0) {
+            alert("Foram encontrados os seguintes erros:\n" + errorLog.join('\n'));
+        }
+
+        downloadExcelBtn.disabled = false;
+        downloadCsvBtn.disabled = false;
+    };
+    reader.readAsArrayBuffer(file);
+});
+
+function processData(data) {
+    const headers = ['ITENS', 'CODIGO', 'QND', 'DESCRIÇÃO', 'MASS', 'MATERIAL', 'LINK'];
+    const headerIndexMap = {};
+    errorLog = []; // Limpa erros anteriores
+
+    // Mapeia as colunas com base nos cabeçalhos
+    data[0].forEach((header, index) => {
+        if (headers.includes(header)) {
+            headerIndexMap[header] = index;
+        }
+    });
+
+    // Preenche colunas ausentes
+    headers.forEach((header) => {
+        if (!(header in headerIndexMap)) {
+            headerIndexMap[header] = -1; // Coluna ausente
+        }
+    });
+
+    const processedData = [headers];
+
+    // Processa as linhas
+    data.slice(1).forEach((row, rowIndex) => {
+        const newRow = headers.map((header) => {
+            const colIndex = headerIndexMap[header];
+            let value = colIndex !== -1 ? row[colIndex] || '' : '';
+
+            // Validações específicas por coluna
+            if (header === 'CODIGO') {
+                if (!/^\d{2}\.\d{2}\.\d{2}\.\d{10}$/.test(value)) {
+                    errorLog.push(`Erro no código na linha ${rowIndex + 2}: "${value}" não está no formato correto.`);
+                }
+            } else if (header === 'DESCRIÇÃO' && value.trim() === '') {
+                errorLog.push(`Descrição ausente na linha ${rowIndex + 2}.`);
+            } else if (header === 'MASS') {
+                value = '0,1'; // Define "MASS" como 0,1
+            } else if (['MATERIAL', 'LINK'].includes(header)) {
+                value = ''; // Garante que essas colunas fiquem vazias
+            }
+
+            return value;
+        });
+
+        processedData.push(newRow);
+    });
+
+    // Caso a coluna 'ITENS' esteja ausente, cria a numeração
+    if (headerIndexMap['ITENS'] === -1) {
+        processedData.forEach((row, index) => {
+            if (index === 0) {
+                row[0] = 'ITENS';
+            } else {
+                row[0] = index;
+            }
+        });
     }
+
+    return processedData;
+}
+
+function renderTableWithHeaders(data) {
+    let tableHtml = '<table>';
+    tableHtml += '<thead><tr>';
+    data[0].forEach((header) => {
+        tableHtml += `<th contenteditable="true">${header}</th>`;  // Permite edição dos cabeçalhos
+    });
+    tableHtml += '</tr></thead>';
+    tableHtml += '<tbody>';
+    data.slice(1).forEach((row) => {
+        tableHtml += '<tr>';
+        row.forEach((cell) => {
+            tableHtml += `<td contenteditable="true">${cell}</td>`;  // Permite edição das células
+        });
+        tableHtml += '</tr>';
+    });
+    tableHtml += '</tbody></table>';
+    tableContainer.innerHTML = tableHtml;
+}
+
+downloadExcelBtn.addEventListener('click', () => {
+    const sheet = XLSX.utils.table_to_sheet(document.querySelector('table'));
+    const newWorkbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(newWorkbook, sheet, 'Sheet1');
+    XLSX.writeFile(newWorkbook, 'editado.xlsx');
+});
+
+downloadCsvBtn.addEventListener('click', () => {
+    const sheet = XLSX.utils.table_to_sheet(document.querySelector('table'));
+    const csv = XLSX.utils.sheet_to_csv(sheet);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'editado.csv';
+    link.click();
 });
