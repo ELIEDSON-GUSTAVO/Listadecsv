@@ -36,7 +36,7 @@ uploadInput.addEventListener('change', (event) => {
 });
 
 function processData(data) {
-    const headers = ['ITENS', 'CODIGO', 'QND', 'DESCRIÇÃO', 'MASS', 'MATERIAL', 'LINK'];
+    const headers = ['ITENS', 'CODIGO', 'QND', 'DESCRIÇAO', 'MASS', 'MATERIAL', 'LINK'];
     const headerIndexMap = {};
     errorLog = []; // Limpa erros anteriores
 
@@ -66,7 +66,7 @@ function processData(data) {
                 if (!/^\d{2}\.\d{2}\.\d{2}\.\d{10}$/.test(value)) {
                     errorLog.push(`Erro no código na linha ${rowIndex + 2}: "${value}" não está no formato correto.`);
                 }
-            } else if (header === 'DESCRIÇÃO' && value.trim() === '') {
+            } else if (header === 'DESCRIÇAO' && value.trim() === '') {
                 errorLog.push(`Descrição ausente na linha ${rowIndex + 2}.`);
             } else if (header === 'MASS') {
                 value = '0,1'; // Define "MASS" como 0,1
