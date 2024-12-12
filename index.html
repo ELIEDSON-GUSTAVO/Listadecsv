@@ -1,95 +1,98 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visualização e Edição de Tabela</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.3/xlsx.full.min.js"></script>
-    <style>
-        /* Estilos gerais */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f4f4f9;
-        }
-        
-        h1 {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        /* Estilo do contêiner de tabela */
-        #table-container {
-            margin: 20px 0;
-            overflow-x: auto;
-        }
-
-        /* Estilo da tabela */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        table, th, td {
-            border: 1px solid #ddd;
-        }
-
-        th, td {
-            padding: 10px;
-            text-align: left;
-            cursor: pointer;
-        }
-
-        th {
-            background-color: #f2f2f2;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-
-        tr:hover {
-            background-color: #f1f1f1;
-        }
-
-        /* Estilo dos botões */
-        button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            margin: 10px 5px;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-
-        button:hover:not(:disabled) {
-            background-color: #45a049;
-        }
-
-        /* Estilos para editar as células */
-        td.editable {
-            background-color: #e8f4e8;
-        }
-
-        td.editable:hover {
-            background-color: #c8e6c8;
-        }
-    </style>
+    <title>Exemplo de Tabela de Importação</title>
 </head>
 <body>
-    <h1>Visualização e Edição de Dados Excel</h1>
-    <input type="file" id="upload" />
-    <button id="download-excel" disabled>Baixar Excel</button>
-    <button id="download-csv" disabled>Baixar CSV</button>
-    <div id="table-container"></div>
 
-    <script src="script.js"></script>
+    <h2>Tabela de Importação</h2>
+
+    <table id="tabela-importacao" border="1">
+        <thead>
+            <tr>
+                <th>ITEM</th>
+                <th>DESCRIÇÃO</th>
+                <th>QUANTIDADE</th>
+                <th>MATERIAL</th>
+                <th>LINK</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td>MACANETA EXT PORTA C/ MIOLO PRETO FUSCA até 1996</td>
+                <td>0,1</td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>VELA DE IGNIÇÃO PARA MOTOR X</td>
+                <td>0,1</td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>FILTRO DE AR MOTOR Y</td>
+                <td>0,1</td>
+                <td></td>
+                <td></td>
+            </tr>
+            <!-- Mais linhas podem ser adicionadas -->
+        </tbody>
+    </table>
+
+    <button onclick="extrairDados()">Extrair Dados</button>
+
+    <script>
+        // Função para capturar e organizar os dados da tabela
+        function extrairDados() {
+            const tabela = document.getElementById("tabela-importacao");
+            const linhas = tabela.getElementsByTagName("tr");  // Captura todas as linhas da tabela
+            
+            // Array para armazenar os dados extraídos
+            let dados = [];
+            
+            // Itera sobre as linhas, ignorando a primeira (que são os cabeçalhos)
+            for (let i = 1; i < linhas.length; i++) {
+                const celulas = linhas[i].getElementsByTagName("td");
+                
+                if (celulas.length > 0) {
+                    // Extrai os valores de cada célula
+                    let item = celulas[0].textContent.trim();
+                    let descricao = celulas[1].textContent.trim();
+                    let quantidade = celulas[2].textContent.trim();
+                    let material = celulas[3].textContent.trim();
+                    let link = celulas[4].textContent.trim();
+                    
+                    // Armazena os dados no array
+                    dados.push({
+                        item: item,
+                        descricao: descricao,
+                        quantidade: quantidade,
+                        material: material,
+                        link: link
+                    });
+                }
+            }
+            
+            // Exibe os dados extraídos no console
+            console.log(dados);
+
+            // Exemplo de como exibir os dados extraídos na página
+            let resultado = "<h3>Dados Extraídos</h3><ul>";
+            dados.forEach(dado => {
+                resultado += `<li><strong>Item:</strong> ${dado.item}, <strong>Descrição:</strong> ${dado.descricao}, <strong>Quantidade:</strong> ${dado.quantidade}, <strong>Material:</strong> ${dado.material || "Não disponível"}, <strong>Link:</strong> ${dado.link || "Não disponível"}</li>`;
+            });
+            resultado += "</ul>";
+            
+            // Exibe os dados extraídos na página
+            document.body.innerHTML += resultado;
+        }
+    </script>
+
 </body>
 </html>
