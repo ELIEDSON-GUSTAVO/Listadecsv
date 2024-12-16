@@ -1,5 +1,8 @@
 import pandas as pd
 import re
+import tkinter as tk
+from tkinter import filedialog
+import os
 
 # Função para validar o formato do código
 def validate_codigo(value):
@@ -51,16 +54,30 @@ def process_data(df):
     return export_df, error_log
 
 # Função para salvar o dataframe em Excel
-def save_to_excel(df, file_name='editado.xlsx'):
-    df.to_excel(file_name, index=False)
+def save_to_excel(df, folder_path, file_name='editado.xlsx'):
+    df.to_excel(os.path.join(folder_path, file_name), index=False)
 
 # Função para salvar o dataframe em CSV
-def save_to_csv(df, file_name='editado.csv'):
-    df.to_csv(file_name, index=False)
+def save_to_csv(df, folder_path, file_name='editado.csv'):
+    df.to_csv(os.path.join(folder_path, file_name), index=False)
+
+# Função para carregar o arquivo selecionado
+def carregar_arquivo():
+    file_path = filedialog.askopenfilename(title="Selecione a planilha", filetypes=[("Arquivos Excel", "*.xlsx")])
+    if file_path:
+        folder_path = filedialog.askdirectory(title="Selecione o diretório de destino")  # Solicita o diretório de destino
+        if folder_path:
+            main(file_path, folder_path)  # Chama a função principal com o caminho do arquivo e o diretório selecionado
+
+# Função para salvar ambos os arquivos (Excel e CSV) com o mesmo nome base
+def salvar_arquivos(df, folder_path, base_name='editado'):
+    # Salva os arquivos com o nome base + extensões .xlsx e .csv no diretório selecionado
+    save_to_excel(df, folder_path, f"{base_name}.xlsx")
+    save_to_csv(df, folder_path, f"{base_name}.csv")
+    print(f"Arquivos salvos como: {os.path.join(folder_path, base_name + '.xlsx')} e {os.path.join(folder_path, base_name + '.csv')}")
 
 # Função principal para importar, processar e exportar os dados
-def main(input_file):
-    # Carregar o arquivo Excel
+def main(input_file, folder_path):
     try:
         df = pd.read_excel(input_file)
         print("Planilha carregada com sucesso.")
@@ -75,13 +92,12 @@ def main(input_file):
     print("\nTabela processada:")
     print(export_df)
 
-    # Salvar os dados processados em Excel e CSV
-    save_to_excel(export_df)
-    save_to_csv(export_df)
+    # Salvar ambos os arquivos (Excel e CSV) no diretório escolhido
+    salvar_arquivos(export_df, folder_path)
 
-    print("\nOs dados foram exportados para 'editado.xlsx' e 'editado.csv'.")
-
-# Exemplo de uso
+# Exemplo de uso com interface gráfica
 if __name__ == "__main__":
-    input_file = '568 - ANTONIO LENUDO DE OLIVEIRA EIRELI - CARROCERIA ELETRICIARI.xlsx'  # Substitua pelo caminho do seu arquivo
-    main(input_file)
+    root = tk.Tk()
+    root.withdraw()  # Esconde a janela principal
+    carregar_arquivo()  # Chama a função para carregar o arquivo e escolher a pasta
+
