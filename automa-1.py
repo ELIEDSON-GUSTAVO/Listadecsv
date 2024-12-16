@@ -16,6 +16,10 @@ def process_data(df):
 
     # Processar cada linha da tabela de importação
     for index, row in df.iterrows():
+        # Desconsiderar linhas vazias (verifica se algum campo importante está preenchido)
+        if pd.isnull(row['CODIGO']) and pd.isnull(row['DESCRIÇÃO']):
+            continue  # Pula para a próxima linha se ambos os campos estiverem vazios
+
         # Validar o formato do código
         if pd.notnull(row.get('CODIGO')) and not validate_codigo(row['CODIGO']):
             error_log.append(f"Erro no código na linha {index + 2}: '{row['CODIGO']}' não está no formato correto.")
