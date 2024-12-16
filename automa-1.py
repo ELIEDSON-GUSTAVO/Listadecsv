@@ -24,8 +24,8 @@ def process_data(df):
         if pd.isnull(row.get('DESCRIÇÃO')):
             error_log.append(f"Descrição ausente na linha {index + 2}.")
 
-        # Criar uma linha para exportação com dados válidos
-        new_row = {
+        # Criar uma nova linha para exportação com dados válidos
+        new_row = pd.DataFrame([{
             'ITENS': index + 1,  # Gerar sequencialmente, começando em 1
             'CODIGO': row.get('CODIGO', ''),
             'QND': row.get('QND', 0),
@@ -33,10 +33,10 @@ def process_data(df):
             'MASS': 0.1,  # Define "MASS" como 0.1
             'MATERIAL': '',  # "MATERIAL" fica vazio
             'LINK': ''  # "LINK" fica vazio
-        }
+        }])
 
-        # Adicionar a nova linha ao DataFrame de exportação
-        export_df = export_df.append(new_row, ignore_index=True)
+        # Usar pd.concat para adicionar a nova linha ao DataFrame de exportação
+        export_df = pd.concat([export_df, new_row], ignore_index=True)
 
     # Exibir os erros encontrados
     if error_log:
@@ -79,5 +79,5 @@ def main(input_file):
 
 # Exemplo de uso
 if __name__ == "__main__":
-    input_file = 'COMPRADOS - 560 - ANTONIO LENUDO DE OLIVEIRA EIRELI - CARROCERIA ELETRICIARIO EM AÇO - VW - 17.210.xlsx'  # Substitua pelo caminho do seu arquivo
+    input_file = '568 - ANTONIO LENUDO DE OLIVEIRA EIRELI - CARROCERIA ELETRICIARI.xlsx'  # Substitua pelo caminho do seu arquivo
     main(input_file)
