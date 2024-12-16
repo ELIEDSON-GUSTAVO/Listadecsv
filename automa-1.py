@@ -100,4 +100,3 @@ if __name__ == "__main__":
     root = tk.Tk()
     root.withdraw()  # Esconde a janela principal
     carregar_arquivo()  # Chama a função para carregar o arquivo e escolher a pasta
-
